@@ -8,13 +8,13 @@ install_requires = [
 
 if sys.version_info < (3, 4):
     # Backport of Python 3.4 enums to earlier versions
-    # reference: https://github.com/donnemartin/saws/commit/f109bc8f534905797ee44239cb766ea3de4ceb5d
-    # credit to [donnemartin](https://github.com/donnemartin) and [geraldlnj](https://github.com/geraldlnj
+    # reference: https://github.com/donnemartin/saws/commit/f109bc8f534905797ee44239cb766ea3de4ceb5d  # noqa
+    # credit to [donnemartin](https://github.com/donnemartin) and [geraldlnj](https://github.com/geraldlnj  # noqa
     install_requires.append('enum34>=1.1.6')
 
 setup(
-    name='mongodb-migrations',
-    version='1.1.1',
+    name='testing_mongodb-migrations',
+    version='1.1.4',
     description='A database migration tool for MongoDB',
     long_description=__doc__,
     url='https://github.com/DoubleCiti/mongodb-migrations',

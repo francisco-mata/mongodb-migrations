@@ -24,9 +24,14 @@ class MigrationManager(object):
         self.config = config
 
     def run(self):
-        self.db = self._get_mongo_database(self.config.mongo_host, self.config.mongo_port, self.config.mongo_database,
-                                           self.config.mongo_username, self.config.mongo_password,
-                                           self.config.mongo_url)
+        self.db = self._get_mongo_database(
+            self.config.mongo_host,
+            self.config.mongo_port,
+            self.config.mongo_database,
+            self.config.mongo_username,
+            self.config.mongo_password,
+            self.config.mongo_url
+        )
         files = os.listdir(self.config.mongo_migrations_path)
         for file in files:
             result = re.match('^(\d+)[_a-z]*\.py$', file)
@@ -34,12 +39,18 @@ class MigrationManager(object):
                 self.migrations[result.group(1)] = file[:-3]
 
         database_migrations = self._get_migration_names()
-        self.database_migration_names = [migration['migration_datetime'] for migration in database_migrations]
+        self.database_migration_names = [
+            migration['migration_datetime']
+            for migration in database_migrations
+        ]
         if set(self.database_migration_names) - set(self.migrations.keys()):
             print("migrations doesn't match")
             sys.exit(1)
         if self.database_migration_names:
-            print("Found previous migrations, last migration is version: %s" % self.database_migration_names[0])
+            print(
+                f'Found previous migrations, last migration is version: '
+                f'{self.database_migration_names[0]}'
+            )
         else:
             print("No previous migrations found")
 
@@ -53,62 +64,99 @@ class MigrationManager(object):
         for migration_datetime in sorted(self.migrations.keys()):
             if to_datetime and migration_datetime > to_datetime:
                 break
-            if not self.database_migration_names or migration_datetime > self.database_migration_names[0]:
-                print("Trying to upgrade version: %s" % self.migrations[migration_datetime])
+            if (
+                not self.database_migration_names or
+                migration_datetime > self.database_migration_names[0]
+            ):
+                print(
+                    f'Trying to upgrade version: '
+                    f'{self.migrations[migration_datetime]}'
+                )
                 try:
                     module = __import__(self.migrations[migration_datetime])
-                    migration_object = module.Migration(host=self.config.mongo_host,
-                                                        port=self.config.mongo_port,
-                                                        database=self.config.mongo_database,
-                                                        user=self.config.mongo_username,
-                                                        password=self.config.mongo_password,
-                                                        url=self.config.mongo_url)
+                    migration_object = module.Migration(
+                        host=self.config.mongo_host,
+                        port=self.config.mongo_port,
+                        database=self.config.mongo_database,
+                        user=self.config.mongo_username,
+                        password=self.config.mongo_password,
+                        url=self.config.mongo_url
+                    )
                     migration_object.upgrade()
                 except Exception as e:
-                    print("Failed to upgrade version: %s" % self.migrations[migration_datetime])
+                    print(
+                        f"Failed to upgrade version: "
+                        f"{self.migrations[migration_datetime]}"
+                    )
                     print(e.__class__)
                     if hasattr(e, 'message'):
                         print(e.message)
                     raise
-                print("Succeed to upgrade version: %s" % self.migrations[migration_datetime])
+                print(
+                    f"Succeed to upgrade version: "
+                    f"{self.migrations[migration_datetime]}"
+                )
                 self._create_migration(migration_datetime)
 
     def _do_rollback(self, to_datetime=None):
-        for migration_datetime in sorted(self.database_migration_names, reverse=True):
+        for migration_datetime in sorted(
+            self.database_migration_names, reverse=True
+        ):
             if to_datetime and migration_datetime <= to_datetime:
                 break
             if self.migrations[migration_datetime]:
-                print("Trying to downgrade version: %s" % self.migrations[migration_datetime])
+                print(
+                    f"Trying to downgrade version: "
+                    f"{self.migrations[migration_datetime]}"
+                )
                 try:
                     module = __import__(self.migrations[migration_datetime])
-                    migration_object = module.Migration(host=self.config.mongo_host,
-                                                        port=self.config.mongo_port,
-                                                        database=self.config.mongo_database,
-                                                        user=self.config.mongo_username,
-                                                        password=self.config.mongo_password,
-                                                        url=self.config.mongo_url)
+                    migration_object = module.Migration(
+                        host=self.config.mongo_host,
+                        port=self.config.mongo_port,
+                        database=self.config.mongo_database,
+                        user=self.config.mongo_username,
+                        password=self.config.mongo_password,
+                        url=self.config.mongo_url
+                    )
                     migration_object.downgrade()
                 except Exception as e:
-                    print("Failed to downgrade version: %s" % self.migrations[migration_datetime])
+                    print(
+                        f"Failed to downgrade version: "
+                        f"{self.migrations[migration_datetime]}"
+                    )
                     print(e.__class__)
                     if hasattr(e, 'message'):
                         print(e.message)
                     raise
-                print("Succeed to downgrade version: %s" % self.migrations[migration_datetime])
+                print(
+                    f"Succeed to downgrade version: "
+                    f"{self.migrations[migration_datetime]}"
+                )
                 self._remove_migration(migration_datetime)
 
     def _get_migration_names(self):
-        return self.db[self.config.metastore].find().sort('migration_datetime', pymongo.DESCENDING)
+        return self.db[self.config.metastore].find().sort(
+            'migration_datetime', pymongo.DESCENDING
+        )
 
     def _create_migration(self, migration_datetime):
-        self.db[self.config.metastore].insert_one({'migration_datetime': migration_datetime,
-                                          'created_at': datetime.now()})
+        self.db[self.config.metastore].insert_one(
+            {
+                'migration_datetime': migration_datetime,
+                'created_at': datetime.now()
+            }
+        )
 
     def _remove_migration(self, migration_datetime):
-        self.db[self.config.metastore].delete_one({'migration_datetime': migration_datetime})
+        self.db[self.config.metastore].remove(
+            {'migration_datetime': migration_datetime}
+        )
 
     def _get_mongo_database(self, host, port, database, user, password, url):
-        if url and database and user is not None: #provide auth_database in url (mongodb://mongohostname:27017/auth_database)
+        # provide auth_database in url
+        # (mongodb://mongohostname:27017/auth_database)
+        if url and database and user is not None:
             client = pymongo.MongoClient(url, username=user, password=password)
             return client.get_database(database)
         elif url:
@@ -118,7 +166,9 @@ class MigrationManager(object):
             client = pymongo.MongoClient(host=host, port=port)
             return client[database]
         else:
-            raise Exception('no database, url or auth_database in url provided')
+            raise Exception(
+                'NO database, url or auth_database in url provided'
+            )
 
 
 def main():
